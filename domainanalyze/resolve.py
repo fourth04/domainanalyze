@@ -66,6 +66,7 @@ def whois_resolve(url_like):
     """输入url_like，查询whois信息。
     使用whois模块过程中发现，whois模块并不会抛出异常，只会打印出异常，出现异常的时候，查询到的所有whois结果为None。
     此外，whois会返回两种格式的结果，一般是18个字段的结果，但是有些查询结果会出现更为详尽的61个字段(详尽记录了admin/registrant/tech/trademark，即管理员、注册者等的各种记录，怀疑是老版本的记录格式)，所以需要统一字段，才方便存入数据库，我们将这种61个字段的主要取其注册者信息，从而精简为18个字段。
+    后来又发现居然有64个字段的返回结果，也是醉了！发现多了registrant_address1，少了registrant_address和registrant_org
 
     :url_like: 可能有几种形式：url: http://www.baidu.com，domain: www.baidu.com，ip: 14.15.15.17，甚至可能是：http://14.15.16.17:80
     :returns: {url_like: whois}
@@ -74,6 +75,10 @@ def whois_resolve(url_like):
     sld = '.'.join(tldextract.extract(url_like)[1:])
     w = whois.whois(sld)
     if len(w) > 25:
+        if 'registrant_address1' in w:
+            w['registrant_address'] = w['registrant_address1' ]
+        if 'registrant_org' not in w:
+            w['registrant_org'] = None
         w = {
             'address': w['registrant_address'],
             'city': w['registrant_city'],
@@ -135,16 +140,17 @@ def tencent_resolve(url_like):
         data['data']['evilclass'] = evilclass
         data['data']['urltype'] = urltype
         data['data']['category'] =  evilclass if urltype != '安全' else urltype
-        return {url_like: data}
+        d = data['data']
+        return {url_like: d}
     else:
-        return {url_like: {}}
+        return {url_like: {'dname': url_like,'category': '未知', 'urltype': '未知', 'evilclass': '未知'}}
 
 
 def tencent_resolve_bulk(urls, n=30):
     """批量解析url_like的安全信息
 
     :urls: [url_like...]
-    :returns: {url_like1: {tencent1...}, url_like2: {tencent2...}, ...}
+    :returns: {'tencent': {url_like1: {tencent1...}, url_like2: {tencent2...}, ...}}
 
     """
     with ThreadPoolExecutor(n) as pool:

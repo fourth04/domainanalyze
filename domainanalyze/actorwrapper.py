@@ -1,6 +1,5 @@
 from multiprocessing import Process, Queue
 
-
 class ActorWrapper(Process):
 
     """将一个函数转换成带有核心操作--send()的Actor，这是一个进程对象，以便消息发布/订阅模型中的交换机可以发布消息"""
