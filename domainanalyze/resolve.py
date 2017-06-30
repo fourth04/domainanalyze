@@ -14,7 +14,8 @@ IPADR_PATTERN = re.compile(r'^(?:\d+\.){3}\d+')
 JWT = conf.JWT
 URLTYPE_DICT = conf.URLTYPE_DICT
 EVILCLASS_DICT = conf.EVILCLASS_DICT
-
+SHOWAPI_APPID = conf.SHOWAPI_APPID
+SHOWAPI_SIGN = conf.SHOWAPI_SIGN
 
 def multithreading(n):
     def wrapper(func):
@@ -166,7 +167,7 @@ def icp_resolve(url_like):
 
     """
     url="http://route.showapi.com/846-1"
-    payload = dict(showapi_appid="14988", showapi_sign="00347395105947c0bd9940225bc51628", domain=url_like)
+    payload = dict(showapi_appid=SHOWAPI_APPID, showapi_sign=SHOWAPI_SIGN, domain=url_like)
     try:
         r = requests.post(url, payload)
         icp = r.json()
