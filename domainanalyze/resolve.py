@@ -11,9 +11,11 @@ from collections import ChainMap
 import conf
 
 IPADR_PATTERN = re.compile(r'^(?:\d+\.){3}\d+')
-JWT = conf.JWT
+TENCENT_JWT = conf.TENCENT_JWT
+TENCENT_URL = conf.TENCENT_URL
 URLTYPE_DICT = conf.URLTYPE_DICT
 EVILCLASS_DICT = conf.EVILCLASS_DICT
+SHOWAPI_URL = conf.SHOWAPI_URL
 SHOWAPI_APPID = conf.SHOWAPI_APPID
 SHOWAPI_SIGN = conf.SHOWAPI_SIGN
 
@@ -124,12 +126,12 @@ def tencent_resolve(url_like):
     :returns: {url_like: tencent}
 
     """
-    url = 'http://119.29.190.236:3000/api/records'
+    url = TENCENT_URL
     payload = {
         'dname': url_like
     }
     headers = {
-        'Authorization': 'Bearer {}'.format(JWT)
+        'Authorization': 'Bearer {}'.format(TENCENT_JWT)
     }
     r = requests.get(url, params=payload, headers=headers)
     if r.ok:
@@ -166,7 +168,7 @@ def icp_resolve(url_like):
     :returns: {url_like: icp}
 
     """
-    url="http://route.showapi.com/846-1"
+    url = SHOWAPI_URL
     payload = dict(showapi_appid=SHOWAPI_APPID, showapi_sign=SHOWAPI_SIGN, domain=url_like)
     try:
         r = requests.post(url, payload)
