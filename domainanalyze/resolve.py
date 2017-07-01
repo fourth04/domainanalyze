@@ -10,6 +10,7 @@ import itertools
 from concurrent.futures import ThreadPoolExecutor
 from collections import ChainMap
 import conf
+import json
 import IP
 
 IPADR_PATTERN = re.compile(r'^(?:\d+\.){3}\d+')
@@ -48,6 +49,14 @@ def location_resolve(url_like):
         location = dict(zip(headers, location_l[:3] + location_l[-1:]))
     return {url_like: location}
 
+def location_resolve_plus(url_ips):
+    url = url_ips[0]
+    ips = url_ips[1]
+    ips_l = json.loads(ips)
+    with ThreadPoolExecutor(len(ips_l)) as pool:
+        result = pool.map(location_resolve, ips_l)
+        return {url: {k:v for r in result for k,v in r.items()}}
+
 def location_resolve_bulk(urls, n=30):
     """批量解析url_like的whois
 
@@ -56,7 +65,7 @@ def location_resolve_bulk(urls, n=30):
 
     """
     with ThreadPoolExecutor(n) as pool:
-        result = pool.map(location_resolve, urls)
+        result = pool.map(location_resolve_plus, urls.items())
         return {'location': ChainMap(*result)}
 
 #  @multithreading(30)
@@ -107,32 +116,35 @@ def whois_resolve(url_like):
 
     """
     sld = '.'.join(tldextract.extract(url_like)[1:])
-    w = whois.whois(sld)
-    if len(w) > 25:
-        if 'registrant_address1' in w:
-            w['registrant_address'] = w['registrant_address1' ]
-        if 'registrant_org' not in w:
-            w['registrant_org'] = None
-        w = {
-            'address': w['registrant_address'],
-            'city': w['registrant_city'],
-            'country': w['registrant_country'],
-            'creation_date': w['creation_date'],
-            'dnssec': None,
-            'domain_name': w['domain_name'],
-            'emails': w['registrant_email'],
-            'expiration_date': w['expiration_date'],
-            'name': w['registrant_name'],
-            'name_servers': w['name_servers'],
-            'org': w['registrant_org'],
-            'referral_url': None,
-            'registrar': w['registrar'],
-            'state': w['registrant_state_province'],
-            'status': w['status'],
-            'updated_date': w['updated_date'],
-            'whois_server': None,
-            'zipcode': w['registrant_postal_code'],
-        }
+    try:
+        w = whois.whois(sld)
+        if len(w) > 25:
+            if 'registrant_address1' in w:
+                w['registrant_address'] = w['registrant_address1' ]
+            if 'registrant_org' not in w:
+                w['registrant_org'] = None
+            w = {
+                'address': w['registrant_address'],
+                'city': w['registrant_city'],
+                'country': w['registrant_country'],
+                'creation_date': w['creation_date'],
+                'dnssec': None,
+                'domain_name': w['domain_name'],
+                'emails': w['registrant_email'],
+                'expiration_date': w['expiration_date'],
+                'name': w['registrant_name'],
+                'name_servers': w['name_servers'],
+                'org': w['registrant_org'],
+                'referral_url': None,
+                'registrar': w['registrar'],
+                'state': w['registrant_state_province'],
+                'status': w['status'],
+                'updated_date': w['updated_date'],
+                'whois_server': None,
+                'zipcode': w['registrant_postal_code'],
+            }
+    except Exception:
+        w = {}
     return {url_like: w}
 
 
@@ -162,8 +174,8 @@ def tencent_resolve(url_like):
     headers = {
         'Authorization': 'Bearer {}'.format(TENCENT_JWT)
     }
-    r = requests.get(url, params=payload, headers=headers)
-    if r.ok:
+    try:
+        r = requests.get(url, params=payload, headers=headers)
         data = r.json()
         evilclass_code = data['data']['evilclass']
         urltype_code = 0 if data['data']['urltype'] == 9 else data['data']['urltype']
@@ -173,9 +185,9 @@ def tencent_resolve(url_like):
         data['data']['urltype'] = urltype
         data['data']['category'] =  evilclass if urltype != '安全' else urltype
         d = data['data']
-        return {url_like: d}
-    else:
-        return {url_like: {'dname': url_like,'category': '未知', 'urltype': '未知', 'evilclass': '未知'}}
+    except Exception:
+        d = {'dname': url_like,'category': '未知', 'urltype': '未知', 'evilclass': '未知'}
+    return {url_like: d}
 
 
 def tencent_resolve_bulk(urls, n=30):
