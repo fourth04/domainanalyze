@@ -2,3 +2,4 @@ SQLAlchemy>=1.1.10
 python_whois>=0.6.5
 tldextract>=2.0.2
 dnspython>=1.14.0
+17monip>=0.2.7

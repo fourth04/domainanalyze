@@ -130,27 +130,29 @@ def main():
                 #  过滤后剩下的需要查询的dname，注意这些记录的tencent_info已经查过了
                 filtered_dnames = list(set(dnames) - set(safe) - set(exist_records.keys()))
 
-                #  将腾讯接口查询的结果放到q_in队列中做合并
-                tencent = {'tencent': {key:r_tencent[key] for key in filtered_dnames}}
-                #  icp = icp_resolve_bulk(filtered_dnames)
-                #  whois = whois_resolve_bulk(filtered_dnames)
-                #  dns = dns_resolve_bulk(filtered_dnames)
-                q_in.put(tencent)
-                #  q_in.put(icp)
-                #  q_in.put(whois)
-                #  q_in.put(dns)
+                if filtered_dnames:
+                    #  将腾讯接口查询的结果放到q_in队列中做合并
+                    tencent = {'tencent': {key:r_tencent[key] for key in filtered_dnames}}
+                    #  icp = icp_resolve_bulk(filtered_dnames)
+                    #  whois = whois_resolve_bulk(filtered_dnames)
+                    #  dns = dns_resolve_bulk(filtered_dnames)
+                    q_in.put(tencent)
+                    #  q_in.put(icp)
+                    #  q_in.put(whois)
+                    #  q_in.put(dns)
 
-                #  给交换机下发任务
-                exc.send(filtered_dnames)
+                    #  给交换机下发任务
+                    exc.send(filtered_dnames)
 
-                #  获取各接口查询完之后合并的结果
-                resolved_data = q_out.get()
-                bulk_result = [UrlResult(**x) for x in resolved_data]
-                session.bulk_save_objects(bulk_result, return_defaults=True)
-                extracted_result = {result.dname:result.id for result in bulk_result}
-                update_data_suf = [{'_id': dnames_ids[k], 'url_result_id': v} for k,v in extracted_result.items()]
-                r_update_suf = session.execute(u_task, update_data_suf)
-                logger.info(f"在t_task表更新了{r_update_suf.rowcount}条记录")
+                    #  获取各接口查询完之后合并的结果
+                    resolved_data = q_out.get()
+                    bulk_result = [UrlResult(**x) for x in resolved_data]
+                    session.bulk_save_objects(bulk_result, return_defaults=True)
+                    extracted_result = {result.dname:result.id for result in bulk_result}
+                    update_data_suf = [{'_id': dnames_ids[k], 'url_result_id': v} for k,v in extracted_result.items()]
+                    r_update_suf = session.execute(u_task, update_data_suf)
+                    logger.info(f"在t_task表更新了{r_update_suf.rowcount}条记录")
+
                 session.commit()
             except Exception:
                 #  发生异常的话记录异常发生点，并查看是否哪个查询子程序挂了，挂了的话重启

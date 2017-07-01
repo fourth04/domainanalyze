@@ -5,10 +5,12 @@ import dns.rdtypes.IN.A
 import whois
 import tldextract
 import requests
+import itertools
 #  from lxml import etree
 from concurrent.futures import ThreadPoolExecutor
 from collections import ChainMap
 import conf
+import IP
 
 IPADR_PATTERN = re.compile(r'^(?:\d+\.){3}\d+')
 TENCENT_JWT = conf.TENCENT_JWT
@@ -27,6 +29,35 @@ def multithreading(n):
         return inner
     return wrapper
 
+def location_resolve(url_like):
+    """根据输入的url_like，查询其对应的归属地
+
+    :url_like: 可能有几种形式：url: http://www.baidu.com，domain: www.baidu.com，ip: 14.15.15.17，甚至可能是：http://14.15.16.17:80
+    :returns: {url_like: [location]}
+
+    """
+    location_s = IP.find(url_like)
+    location_l = location_s.split('\t') if location_s else []
+    n = len(location_l)
+    headers = ['country', 'province', 'city', 'carrier']
+    if n < 4:
+        location = dict(zip(headers, location_l + list(itertools.repeat('', 4-n))))
+    elif n == 4:
+        location = dict(zip(headers, location_l))
+    else:
+        location = dict(zip(headers, location_l[:3] + location_l[-1:]))
+    return {url_like: location}
+
+def location_resolve_bulk(urls, n=30):
+    """批量解析url_like的whois
+
+    :urls: [url_like...]
+    :returns: {url_like1: {location1...}, url_like2: {location2...}, ...}
+
+    """
+    with ThreadPoolExecutor(n) as pool:
+        result = pool.map(location_resolve, urls)
+        return {'location': ChainMap(*result)}
 
 #  @multithreading(30)
 def dns_resolve(url_like):
@@ -117,8 +148,6 @@ def whois_resolve_bulk(urls, n=30):
         return {'whois': ChainMap(*result)}
 
 #  @multithreading(30)
-
-
 def tencent_resolve(url_like):
     """根据输入的url_like，查询其腾讯安全接口查询结果
 
