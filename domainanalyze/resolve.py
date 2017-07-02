@@ -51,8 +51,10 @@ def location_resolve(url_like):
 
 def location_resolve_plus(url_ips):
     url = url_ips[0]
+    #  需求是只取第一个ip
     ips = url_ips[1]
-    ips_l = json.loads(ips)
+    ips_l = json.loads(ips)[:1]
+    #  ips_l = json.loads(ips)
     with ThreadPoolExecutor(len(ips_l)) as pool:
         result = pool.map(location_resolve, ips_l)
         return {url: {k:v for r in result for k,v in r.items()}}

@@ -30,7 +30,7 @@ class UrlResult(Base):
     category = Column(String(255, 'utf8_unicode_ci'))
     tencent_info = Column(String(1024, 'utf8_unicode_ci'))
     icp_info = Column(String(1024, 'utf8_unicode_ci'))
-    dns_provider = Column(String(5120, 'utf8_unicode_ci'))
+    dns_provider = Column(String(1024, 'utf8_unicode_ci'))
     whois_info = Column(String(3072, 'utf8_unicode_ci'))
     dns_info = Column(String(2048, 'utf8_unicode_ci'))
     add_time = Column(DateTime, nullable=False)
