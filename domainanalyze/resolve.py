@@ -51,13 +51,19 @@ def location_resolve(url_like):
 
 def location_resolve_plus(url_ips):
     url = url_ips[0]
-    #  需求是只取第一个ip
     ips = url_ips[1]
-    ips_l = json.loads(ips)[:1]
-    #  ips_l = json.loads(ips)
-    with ThreadPoolExecutor(len(ips_l)) as pool:
-        result = pool.map(location_resolve, ips_l)
-        return {url: {k:v for r in result for k,v in r.items()}}
+    try:
+        ips_l = json.loads(ips)
+    except json.decoder.JSONDecodeError:
+        rv = {url: {}}
+    else:
+    #  只查询第一个ip的写法
+        rv = {url: location_resolve(ips_l[0])}
+    #  全部查询的写法
+        #  with ThreadPoolExecutor(len(ips_l)) as pool:
+            #  result = pool.map(location_resolve, ips_l)
+            #  rv = {url: {k:v for r in result for k,v in r.items()}}
+    return rv
 
 def location_resolve_bulk(urls, n=30):
     """批量解析url_like的whois

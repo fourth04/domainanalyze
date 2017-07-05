@@ -41,10 +41,11 @@ def main():
     while True:
         data = session.execute(s_task).fetchall()
         n_data = len(data)
-        if not n_data:
-            time.sleep(60)
-            continue
         logger.info(f"从register_task表获取了{n_data}条记录")
+        if not n_data:
+            time.sleep(4 * 60)
+            logger.info(f"休眠4分钟")
+            continue
         dnames_ids = {x[1]: x[0] for x in data}
         dnames = dnames_ids.keys()
 

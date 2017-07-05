@@ -74,5 +74,6 @@ class RegisterTask(Base):
     add_time = Column(DateTime, nullable=False)
     update_time = Column(DateTime, index=True)
     register_result_id = Column(ForeignKey('register_result.id', ondelete='CASCADE', onupdate='CASCADE'), index=True)
+    server_id = Column(Integer)
 
     register_result = relationship('RegisterResult')
