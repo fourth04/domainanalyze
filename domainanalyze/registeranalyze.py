@@ -43,8 +43,8 @@ def main():
         n_data = len(data)
         logger.info(f"从register_task表获取了{n_data}条记录")
         if not n_data:
-            time.sleep(4 * 60)
             logger.info(f"休眠4分钟")
+            time.sleep(4 * 60)
             continue
         dnames_ids = {x[1]: x[0] for x in data}
         dnames = dnames_ids.keys()
@@ -55,7 +55,6 @@ def main():
             update_data_pre = [{'_id': dnames_ids[k], 'register_result_id': v} for k,v in exist_records.items()]
             r_update_pre = session.execute(u_task, update_data_pre)
             logger.info(f"发现已查询过的记录，在register_task表更新了{r_update_pre.rowcount}条记录")
-            continue
 
         filtered_dnames = list(set(dnames) - set(exist_records.keys()))
 

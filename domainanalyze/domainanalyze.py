@@ -114,63 +114,64 @@ def main():
             n_data = len(data)
             logger.info(f"从url_task表获取了{n_data}条记录")
             if not n_data:
-                time.sleep(4 * 60)
                 logger.info(f"休眠4分钟")
+                time.sleep(4 * 60)
                 continue
             dnames_ids = {x[1]: x[0] for x in data}
             dnames_ips = {x[1]: x[2] for x in data}
             dnames = dnames_ids.keys()
 
-            logger.info(f"开始进行腾讯安全接口查询")
-            r_tencent = tencent_resolve_bulk(dnames, 100)['tencent']
-            logger.info(f"腾讯安全接口查询完毕")
-
-            #  过滤出查询结果是安全的结果，将这些dname的记录从t_task表删除
-            safe = {key:value for key,value in r_tencent.items() if value['category'] == '安全'}
-            if safe:
-                ids_safe = [dnames_ids[k] for k in safe]
-                r_delete = session.execute(t_task.delete().where(t_task.c.id.in_(ids_safe)))
-                logger.info(f"从url_task表删除了{r_delete.rowcount}条已确认为安全的记录")
-
             #  过滤出已在t_result表存在的记录，这些不用再查了，直接将url_result_id关联过来
-            not_safe = {key:value for key,value in r_tencent.items() if value['category'] != '安全'}
-            not_safe_dnames = not_safe.keys()
-            r_select = session.execute(s_result.where(t_result.c.dname.in_(not_safe_dnames)))
+            r_select = session.execute(s_result.where(t_result.c.dname.in_(dnames)))
             exist_records = {t[1]:t[0] for t in r_select}
             if exist_records:
                 update_data_pre = [{'_id': dnames_ids[k], 'url_result_id': v} for k,v in exist_records.items()]
                 r_update_pre = session.execute(u_task, update_data_pre)
                 logger.info(f"发现已查询过的记录，在url_task表更新了{r_update_pre.rowcount}条记录")
 
-            #  过滤后剩下的需要查询的dname，注意这些记录的tencent_info已经查过了
-            filtered_dnames = list(set(dnames) - set(safe) - set(exist_records.keys()))
+            not_exist_dnames = list(set(dnames) - set(exist_records.keys()))
 
-            if filtered_dnames:
-                filtered_dnames_ips = {k:v for k,v in dnames_ips.items() if k in filtered_dnames}
-                #  将腾讯接口查询的结果放到q_in队列中做合并
-                tencent = {'tencent': {key:r_tencent[key] for key in filtered_dnames}}
-                dns = {'dns': {key:dnames_ips[key] for key in filtered_dnames}}
-                icp = {'icp': {key:{} for key in filtered_dnames}}
-                #  icp = icp_resolve_bulk(filtered_dnames_ips)
-                #  whois = whois_resolve_bulk(filtered_dnames_ips)
-                #  location = location_resolve_bulk(filtered_dnames_ips)
-                q_in.put(tencent)
-                q_in.put(dns)
-                q_in.put(icp)
-                #  q_in.put(whois)
-                #  q_in.put(location)
+            if not_exist_dnames:
+                #  过滤出查询结果是安全的结果，将这些dname的记录从t_task表删除
+                logger.info(f"开始进行腾讯安全接口查询")
+                r_tencent = tencent_resolve_bulk(not_exist_dnames, 100)['tencent']
+                logger.info(f"腾讯安全接口查询完毕")
 
-                #  给交换机下发任务
-                exc.send(filtered_dnames_ips)
+                safe = {key:value for key,value in r_tencent.items() if value['category'] == '安全'}
+                if safe:
+                    ids_safe = [dnames_ids[k] for k in safe]
+                    r_delete = session.execute(t_task.delete().where(t_task.c.id.in_(ids_safe)))
+                    logger.info(f"从url_task表删除了{r_delete.rowcount}条已确认为安全的记录")
 
-                #  获取各接口查询完之后合并的结果
-                resolved_data = q_out.get()
-                bulk_result = [UrlResult(**x) for x in resolved_data]
-                session.bulk_save_objects(bulk_result, return_defaults=True)
-                extracted_result = {result.dname:result.id for result in bulk_result}
-                update_data_suf = [{'_id': dnames_ids[k], 'url_result_id': v} for k,v in extracted_result.items()]
-                r_update_suf = session.execute(u_task, update_data_suf)
-                logger.info(f"在url_result表插入了{r_update_suf.rowcount}条记录，在url_task表更新了{r_update_suf.rowcount}条记录")
+                #  过滤后剩下的需要查询的dname，注意这些记录的tencent_info已经查过了
+                filtered_dnames = list(set(not_exist_dnames) - set(safe.keys()))
+
+                if filtered_dnames:
+                    filtered_dnames_ips = {k:v for k,v in dnames_ips.items() if k in filtered_dnames}
+                    #  将腾讯接口查询的结果放到q_in队列中做合并
+                    tencent = {'tencent': {key:r_tencent[key] for key in filtered_dnames}}
+                    dns = {'dns': {key:dnames_ips[key] for key in filtered_dnames}}
+                    icp = {'icp': {key:{} for key in filtered_dnames}}
+                    #  icp = icp_resolve_bulk(filtered_dnames_ips)
+                    #  whois = whois_resolve_bulk(filtered_dnames_ips)
+                    #  location = location_resolve_bulk(filtered_dnames_ips)
+                    q_in.put(tencent)
+                    q_in.put(dns)
+                    q_in.put(icp)
+                    #  q_in.put(whois)
+                    #  q_in.put(location)
+
+                    #  给交换机下发任务
+                    exc.send(filtered_dnames_ips)
+
+                    #  获取各接口查询完之后合并的结果
+                    resolved_data = q_out.get()
+                    bulk_result = [UrlResult(**x) for x in resolved_data]
+                    session.bulk_save_objects(bulk_result, return_defaults=True)
+                    extracted_result = {result.dname:result.id for result in bulk_result}
+                    update_data_suf = [{'_id': dnames_ids[k], 'url_result_id': v} for k,v in extracted_result.items()]
+                    r_update_suf = session.execute(u_task, update_data_suf)
+                    logger.info(f"在url_result表插入了{r_update_suf.rowcount}条记录，在url_task表更新了{r_update_suf.rowcount}条记录")
 
             session.commit()
             #  并查看是否哪个查询子程序挂了，挂了的话重启该子进程
