@@ -6,6 +6,7 @@ import whois
 import tldextract
 import requests
 import itertools
+import socket
 #  from lxml import etree
 from concurrent.futures import ThreadPoolExecutor
 from collections import ChainMap
@@ -273,6 +274,57 @@ def icp_resolve_bulk(urls, n=30):
     #  result_regular.update(result_irregular)
     #  return {'icp': ChainMap(result_regular)}
 
+def socket_scan(target_host, target_port):
+    s = socket.socket()
+    s.settimeout(0.2)
+    try:
+        if s.connect_ex((target_host, target_port)) == 0:
+            rv = True
+        else:
+            rv = False
+    except Exception as e:
+        rv = False
+    finally:
+        s.close()
+    return rv
+
+def socket_resolve(std_d):
+    """根据传入的二级数据字典，查询其所有子域名的解析IP是否开启了80或者443端口
+
+    :std_d: {std: '{dname:[ip1, ip2]}'}
+    :returns: {std: {'http_info': [dname1, dname2], 'https_info': [dname3, dname4]}}
+
+    """
+    #  std_d = {'hanbang.org.cn': '{"0006a5a.hanbang.org.cn":["183.18.205.98"],"00072e9.hanbang.org.cn":["113.117.1.145"],"00075d4.hanbang.org.cn":["113.110.43.50"],"00078f6.hanbang.org.cn":["183.49.245.80"],"000912a.hanbang.org.cn":["14.217.206.117"],"00096bd.hanbang.org.cn":["183.55.161.151"],"0009866.hanbang.org.cn":["113.92.121.224"],"000a2b1.hanbang.org.cn":["183.55.69.219"],"000a5f5.hanbang.org.cn":["14.217.133.139"],"000b317.hanbang.org.cn":["14.145.89.128"],"000dc07.hanbang.org.cn":["113.102.200.156"],"000e41c.hanbang.org.cn":["14.223.165.239"],"0012461.hanbang.org.cn":["14.220.112.165"],"0013841.hanbang.org.cn":["183.1.213.129"],"0014d3c.hanbang.org.cn":["119.131.53.110"],"0015b54.hanbang.org.cn":["113.73.129.102"],"0015da2.hanbang.org.cn":["113.117.24.155"],"001637f.hanbang.org.cn":["113.88.151.181"],"0018d56.hanbang.org.cn":["183.8.201.3"]}'}
+    try:
+        dnames_d = json.loads(list(std_d.values())[0])
+    except Exception as e:
+        dnames_d = {}
+    http_info = []
+    https_info = []
+    addresses = [ip for k,v in dnames_d.items() for ip in v]
+    for k,v in dnames_d.items():
+        for ip in v:
+            flag_http = socket_scan(ip, 80)
+            flag_https = socket_scan(ip, 443)
+            if flag_http or flag_https:
+                if flag_http:
+                    http_info.append(k)
+                if flag_https:
+                    https_info.append(k)
+                break
+    return {list(std_d.keys())[0]: dict(http_info=json.dumps(http_info), https_info=json.dumps(https_info), addresses=json.dumps(addresses))}
+
+def socket_resolve_bulk(std_ds, n=30):
+    """批量解析二级域名的子域名是否http和https可达
+
+    :std_ds: [std_d1, std_d1...]
+    :returns: {std1: {}, std2: {}}
+
+    """
+    with ThreadPoolExecutor(n) as pool:
+        result = pool.map(socket_resolve, std_ds)
+        return {'socket': ChainMap(*result)}
 
 if __name__ == "__main__":
     urls = [line.strip() for line in open('./urls/raw_urls.txt')]

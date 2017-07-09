@@ -52,6 +52,7 @@ class UrlTask(Base):
     customer = relationship('Customer')
     url_result = relationship('UrlResult')
 
+
 class RegisterResult(Base):
     __tablename__ = 'register_result'
 
@@ -62,6 +63,9 @@ class RegisterResult(Base):
     result = Column(String(1024, 'utf8_unicode_ci'), nullable=False)
     add_time = Column(DateTime, nullable=False)
     update_time = Column(DateTime, nullable=False, index=True)
+    http_info = Column(String(1024, 'utf8_unicode_ci'))
+    https_info = Column(String(1024, 'utf8_unicode_ci'))
+    addresses = Column(String(1024, 'utf8_unicode_ci'))
 
 
 class RegisterTask(Base):
@@ -75,5 +79,6 @@ class RegisterTask(Base):
     update_time = Column(DateTime, index=True)
     register_result_id = Column(ForeignKey('register_result.id', ondelete='CASCADE', onupdate='CASCADE'), index=True)
     server_id = Column(Integer)
+    names = Column(String(1024, 'utf8_unicode_ci'))
 
     register_result = relationship('RegisterResult')
