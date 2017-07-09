@@ -276,7 +276,7 @@ def icp_resolve_bulk(urls, n=30):
 
 def socket_scan(target_host, target_port):
     s = socket.socket()
-    s.settimeout(0.2)
+    s.settimeout(0.1)
     try:
         if s.connect_ex((target_host, target_port)) == 0:
             rv = True
@@ -295,7 +295,7 @@ def socket_resolve(std_d):
     :returns: {std: {'http_info': [dname1, dname2], 'https_info': [dname3, dname4]}}
 
     """
-    #  std_d = {'hanbang.org.cn': '{"0006a5a.hanbang.org.cn":["183.18.205.98"],"00072e9.hanbang.org.cn":["113.117.1.145"],"00075d4.hanbang.org.cn":["113.110.43.50"],"00078f6.hanbang.org.cn":["183.49.245.80"],"000912a.hanbang.org.cn":["14.217.206.117"],"00096bd.hanbang.org.cn":["183.55.161.151"],"0009866.hanbang.org.cn":["113.92.121.224"],"000a2b1.hanbang.org.cn":["183.55.69.219"],"000a5f5.hanbang.org.cn":["14.217.133.139"],"000b317.hanbang.org.cn":["14.145.89.128"],"000dc07.hanbang.org.cn":["113.102.200.156"],"000e41c.hanbang.org.cn":["14.223.165.239"],"0012461.hanbang.org.cn":["14.220.112.165"],"0013841.hanbang.org.cn":["183.1.213.129"],"0014d3c.hanbang.org.cn":["119.131.53.110"],"0015b54.hanbang.org.cn":["113.73.129.102"],"0015da2.hanbang.org.cn":["113.117.24.155"],"001637f.hanbang.org.cn":["113.88.151.181"],"0018d56.hanbang.org.cn":["183.8.201.3"]}'}
+    #  std_d = {'5399.com': '{"aty.5399.com":["59.37.127.76","14.18.201.14","183.62.114.245","113.107.107.15","113.107.56.16"],"bbs.5399.com":["183.58.18.36","125.90.204.117","59.37.127.73","59.37.127.72","58.223.166.231","14.215.100.94","183.61.26.199","125.90.206.144","113.107.57.41","113.107.44.234"],"dl-m.5399.com":["58.63.233.48"],"m.5399.com":["113.107.150.61"],"s1.cycs2.5399.com":["125.88.152.171"],"s102.cycs2.5399.com":["119.146.200.238"],"s106.cycs2.5399.com":["125.88.152.160"],"s108.cycs2.5399.com":["125.88.152.172"],"s117.lt2.5399.com":["119.146.201.224"],"s130.cycs2.5399.com":["125.88.152.253"],"s132.cycs2.5399.com":["125.88.152.152"],"s145.cycs2.5399.com":["125.88.152.14"],"s170.cycs2.5399.com":["125.88.152.164"],"s190.cycs2.5399.com":["125.90.93.39"],"s196.cycs2.5399.com":["119.146.201.165"],"s254.nz.5399.com":["183.60.252.137"]}'}
     try:
         dnames_d = json.loads(list(std_d.values())[0])
     except Exception as e:
@@ -306,12 +306,13 @@ def socket_resolve(std_d):
     for k,v in dnames_d.items():
         for ip in v:
             flag_http = socket_scan(ip, 80)
+            if flag_http:
+                http_info.append(k)
+                break
+        for ip in v:
             flag_https = socket_scan(ip, 443)
-            if flag_http or flag_https:
-                if flag_http:
-                    http_info.append(k)
-                if flag_https:
-                    https_info.append(k)
+            if flag_https:
+                https_info.append(k)
                 break
     return {list(std_d.keys())[0]: dict(http_info=json.dumps(http_info), https_info=json.dumps(https_info), addresses=json.dumps(addresses))}
 

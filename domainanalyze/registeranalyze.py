@@ -45,26 +45,26 @@ def main():
             dnames_names = {x[1]: x[2] for x in data}
             dnames = dnames_ids.keys()
 
-            #  r_select = session.execute(s_result.where(t_result.c.domain.in_(dnames)))
-            #  exist_records = {t[1]:t[0] for t in r_select}
-            #  if exist_records:
-                #  update_data_pre = [{'_id': dnames_ids[k], 'register_result_id': v} for k,v in exist_records.items()]
-                #  r_update_pre = session.execute(u_task, update_data_pre)
-                #  logger.info(f"发现已查询过的记录，在register_task表更新了{r_update_pre.rowcount}条记录")
+            r_select = session.execute(s_result.where(t_result.c.domain.in_(dnames)))
+            exist_records = {t[1]:t[0] for t in r_select}
+            if exist_records:
+                update_data_pre = [{'_id': dnames_ids[k], 'register_result_id': v} for k,v in exist_records.items()]
+                r_update_pre = session.execute(u_task, update_data_pre)
+                logger.info(f"发现已查询过的记录，在register_task表更新了{r_update_pre.rowcount}条记录")
 
-            #  filtered_dnames = list(set(dnames) - set(exist_records.keys()))
+            filtered_dnames = list(set(dnames) - set(exist_records.keys()))
             #  用于测试
-            filtered_dnames = dnames
+            #  filtered_dnames = dnames
 
             if filtered_dnames:
                 logger.info(f"开始进行icp接口查询")
-                r_icp = icp_resolve_bulk(filtered_dnames, 50)['icp']
+                #  r_icp = icp_resolve_bulk(filtered_dnames, 100)['icp']
+                r_icp = {dname:{} for dname in filtered_dnames}
                 logger.info(f"icp接口查询完毕")
-                #  icp_resolved_data = ({'status': 'good', 'domain':key, 'register_status': 'yes' if value.get('showapi_res_body', {}).get('ret_code', -1) != -1 else 'no', 'result': json.dumps(value, default=json_serial), 'add_time': datetime.now(), 'update_time': datetime.now()} for key, value in r_icp.items())
 
                 filtered_dnames_names = [{k:v} for k,v in dnames_names.items() if k in filtered_dnames]
                 logger.info(f"开始进行socket接口查询")
-                r_socket = socket_resolve_bulk(filtered_dnames_names, 50)['socket']
+                r_socket = socket_resolve_bulk(filtered_dnames_names, 100)['socket']
                 logger.info(f"socket接口查询完毕")
 
                 resolved_data = ({'status': 'good', 'domain':key, 'register_status': 'yes' if value.get('showapi_res_body', {}).get('ret_code', -1) != -1 else 'no', 'result': json.dumps(value, default=json_serial), 'add_time': datetime.now(), 'update_time': datetime.now(), **r_socket[key]} for key, value in r_icp.items())
