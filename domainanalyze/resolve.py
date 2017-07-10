@@ -314,7 +314,7 @@ def socket_resolve(std_d):
             if flag_https:
                 https_info.append(k)
                 break
-    return {list(std_d.keys())[0]: dict(http_info=json.dumps(http_info), https_info=json.dumps(https_info), addresses=json.dumps(addresses))}
+    return {list(std_d.keys())[0]: dict(http_info=json.dumps(http_info), https_info=json.dumps(https_info), addresses=json.dumps(addresses), names=json.dumps(dnames_d))}
 
 def socket_resolve_bulk(std_ds, n=30):
     """批量解析二级域名的子域名是否http和https可达

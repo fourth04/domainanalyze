@@ -65,7 +65,8 @@ class RegisterResult(Base):
     update_time = Column(DateTime, nullable=False, index=True)
     http_info = Column(String(1024, 'utf8_unicode_ci'))
     https_info = Column(String(1024, 'utf8_unicode_ci'))
-    addresses = Column(String(1024, 'utf8_unicode_ci'))
+    addresses = Column(String(2048, 'utf8_unicode_ci'))
+    names = Column(String(1024, 'utf8_unicode_ci'))
 
 
 class RegisterTask(Base):

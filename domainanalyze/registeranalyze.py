@@ -23,7 +23,7 @@ def main():
     :returns: TODO
 
     """
-    s_task = select([t_task.c.id, t_task.c.domain, t_task.c.names]).where(t_task.c.status == 'new').limit(4)
+    s_task = select([t_task.c.id, t_task.c.domain, t_task.c.names]).where(t_task.c.status == 'new').limit(1000)
     s_result = select([t_result.c.id, t_result.c.domain])
     u_task = t_task.update().where(t_task.c.id == bindparam('_id')).values({'status': 'done', 'register_result_id': bindparam("register_result_id")})
 
@@ -58,8 +58,8 @@ def main():
 
             if filtered_dnames:
                 logger.info(f"开始进行icp接口查询")
-                #  r_icp = icp_resolve_bulk(filtered_dnames, 100)['icp']
-                r_icp = {dname:{} for dname in filtered_dnames}
+                r_icp = icp_resolve_bulk(filtered_dnames, 100)['icp']
+                #  r_icp = {dname:{} for dname in filtered_dnames}
                 logger.info(f"icp接口查询完毕")
 
                 filtered_dnames_names = [{k:v} for k,v in dnames_names.items() if k in filtered_dnames]
