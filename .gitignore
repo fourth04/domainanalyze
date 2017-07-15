@@ -63,3 +63,4 @@ target/
 
 domainanalyze/conf.py
 domainanalyze/myapp.log
+*.csv
