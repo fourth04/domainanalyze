@@ -38,6 +38,7 @@ def main():
             n_data = len(data)
             logger.info(f"从register_task表获取了{n_data}条记录")
             if not n_data:
+                session.commit()
                 logger.info(f"休眠4分钟")
                 time.sleep(4 * 60)
                 continue
